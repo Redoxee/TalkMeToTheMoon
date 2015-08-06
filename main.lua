@@ -53,6 +53,11 @@ Launcher = {
 	ChargeVector = false,
 
 	Initialize = function(o)
+
+		MouseHold.PressFunction = function(holder)
+			o:OnPress(holder)
+		end
+
 		MouseHold.ReleaseFunction = function(holder)
 			o:OnRelease(holder)
 		end
@@ -80,6 +85,10 @@ Launcher = {
 	ComputCharge = function(o,holder)
 		local direction = holder.Position - holder.StartPosition
 		o.ChargeVector = direction:normalized() * math.sqrt(direction:len()) * 4
+	end,
+
+	OnPress = function(o,holder)
+		o.Position = holder.StartPosition
 	end,
 
 	OnRelease = function(o,holder)
