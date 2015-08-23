@@ -1,0 +1,43 @@
+uniform vec2 iResolution;
+uniform sampler2D iStencil;
+
+#ifdef VERTEX
+
+vec4 position( mat4 transform_projection, vec4 vertex_position )
+{
+    return transform_projection * vertex_position;
+}
+#endif
+ 
+#ifdef PIXEL
+
+
+#define P .002
+vec4 outlineColor = vec4(.9,.15,0.04,1.);
+
+vec4 effect( vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords)
+{
+
+    vec2 uv = screen_coords.xy / iResolution.xy;
+    
+    float stencil = texture2D(iStencil,(uv + vec2(-1.,0.) * P)).x;
+    stencil += texture2D(iStencil,(uv + vec2(1.,0.) * P)).x;
+    stencil += texture2D(iStencil,(uv + vec2(0.,-1.) * P)).x;
+    stencil += texture2D(iStencil,(uv + vec2(0.,1.) * P)).x;
+    
+    stencil += texture2D(iStencil,(uv + vec2(-.7,-.7) * P)).x;
+    stencil += texture2D(iStencil,(uv + vec2(.7,.7) * P)).x;
+    stencil += texture2D(iStencil,(uv + vec2(.7,-.7) * P)).x;
+    stencil += texture2D(iStencil,(uv + vec2(-.7,.7) * P)).x;
+    
+    // Contour
+    float a = smoothstep(0.5,1.5,stencil)*(1. - smoothstep(6.1,6.3,stencil));
+    
+    // Stripes
+    a += step(8.,stencil) * step(-.7,sin((uv.x * 240. + uv.y *60.))) * .35;
+    
+    vec4 col = outlineColor * a;
+    
+    return  col;
+}
+#endif

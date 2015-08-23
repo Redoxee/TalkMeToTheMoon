@@ -2,12 +2,13 @@ vector = require "utils.hump.vector"
 require "functionLib"
 require "Levels"
 require "Inputs"
+require "FXManager"
 
 MAX_DT = 0.1
 
-TIMEFACTOR = 3
+TIMEFACTOR = 2
 
-MAX_DISTANCE2 = 3000 * 3000
+MAX_DISTANCE2 = 800 * 800
 
 function GetForce (position, objects, dt) 
 	local cumulativForces = vector(0,0)
@@ -69,8 +70,8 @@ Launcher = {
 
 
 	Draw = function(o)
-		love.graphics.setColor(128,128,128)
-		love.graphics.circle("fill",o.Position.x,o.Position.y,5)
+		-- love.graphics.setColor(128,128,128)
+		-- love.graphics.circle("fill",o.Position.x,o.Position.y,5)
 
 		if o.ChargeVector then
 			local vPos = o.Position + o.ChargeVector
@@ -173,9 +174,6 @@ _Projectils = {
 			r2s[i] = plnt.Radius * plnt.Radius
 		end
 
-
-		toRemove = {}
-
 		for i = 1, #Projectils do
 			p = Projectils[i]
 	
@@ -191,7 +189,7 @@ _Projectils = {
 				end
 			end
 			if not removed then
-				local dist = p.Position:dist2(vector(450,400))
+				local dist = p.Position:dist2(vector(WindowSize[1],WindowSize[2]) / 2)
 				if dist > MAX_DISTANCE2 then
 					Print(tostring(dist))
 					table.insert(o.ToRemoves, i)
@@ -240,6 +238,20 @@ _Projectils = {
 		end
 	end,
 }
+
+SearchForNearestProjectil = function(position)
+	local minDist2 = false
+	local pIndex = 0
+	for i = 1,#Projectils do
+		local p = Projectils[i]
+		local sd = p.Position:dist2(position)
+		if not minDist2 or sd < minDist2 then
+			minDist2 = sd
+			pIndex = i
+		end
+	end
+	return minDist2, pIndex
+end
 
 DeadProjectils = {}
 _DeadProjectils = {
@@ -320,40 +332,87 @@ World = {
 	end,
 }
 
+Controller = {
+	DeleteRadius = 35 * 35,
+
+	DeleteTarget = false,
+
+	Initialize = function(o)
+		MouseHold.RReleaseFunction = function()
+				o:OnDeleteAction()
+			end
+	end,
+
+	Update = function(o)
+		o:_UpdateDeletable()
+	end,
+
+
+	_UpdateDeletable = function(o)
+		local mPosition = MouseHold.Position 
+		local minDist2, pIndex = SearchForNearestProjectil(mPosition)
+
+		if minDist2 and minDist2 < o.DeleteRadius then
+			FXManager.RedContourTarget = Projectils[pIndex].Position
+			o.DeleteTarget = pIndex
+		else
+			FXManager.RedContourTarget = false
+			o.DeleteTarget = false
+		end
+	end,
+
+	OnDeleteAction = function(o)
+		if o.DeleteTarget then
+			ListInsert(_Projectils.ToRemoves,o.DeleteTarget)
+			Print("Deleting " ..  tostring (o.DeleteTarget))
+		end
+	end,
+}
+
 Initialize = function()
 	World:Initialize()
+	Launcher:Initialize()
+	FXManager:Initialize()
+	Controller:Initialize()
+
 
 	table.insert(Updatables, Launcher)
 	table.insert(Updatables, CurrentLevel)
 	table.insert(Updatables, _Projectils)
 	table.insert(Updatables, _DotPointManager)
+	table.insert(Updatables, Controller)
+	table.insert(Updatables, FXManager)
 
 	table.insert(Drawables, _DotPointManager)
 	table.insert(Drawables, CurrentLevel)
 	table.insert(Drawables, Launcher)
 	-- table.insert(Drawables, _DeadProjectils)
 	table.insert(Drawables, _Projectils)
+	table.insert(Drawables, FXManager)
 
-	Launcher:Initialize()
 end
 
 KeyboardHolder:RegisterListener("p",function() Launcher:Spread(105,120) end )
 
-
+WindowSize = {900,800}
 function love.load(arg)
   if arg[#arg] == "-debug" then require("mobdebug").start() end
   
 	love.window.setTitle("Orbit")
-	love.window.setMode(900, 800)
+	love.window.setMode(WindowSize[1], WindowSize[2])
 
 	Initialize()
 end
+
+debugFPS = 0
 
 DebugDraw = function()
 
 	love.graphics.setColor(255,255,255)
 	local h = 15
 	local s = 12
+	love.graphics.print("FPS : " .. tostring(debugFPS), 15, h)
+	h = h + s
 	love.graphics.print("Steps : " .. tostring(IntegrationStep), 15, h)
 	h = h + s
 	love.graphics.print("Projectils : " .. tostring(#Projectils),15,h)
@@ -379,6 +438,7 @@ function love.update(dt)
   		love.event.push('quit')
 	end
 	dt = math.min(dt,3)
+	debugFPS = math.floor(1/dt)
 	dt = dt * TIMEFACTOR
 
 	AbsolutTime = AbsolutTime + dt

@@ -7,6 +7,8 @@ MouseHold = {
 	PressFunction = false,
 	ReleaseFunction = false,
 	DragFunction = false,
+
+	RReleaseFunction = false,
 }
 
 KeyboardHolder = {
@@ -65,6 +67,18 @@ function handleInputs()
 		end
 	end
 	MouseHold.LDown = d
+	d = love.mouse.isDown('r')
+	if d then
+		if MouseHold.RDown then
+		else
+		end
+	else
+		if MouseHold.RDown and MouseHold.RReleaseFunction then
+			MouseHold.RReleaseFunction(MouseHold)
+		end
+	end
+
+	MouseHold.RDown = d
 	MouseHold.Position = curPos
 
 	KeyboardHolder:Update()
