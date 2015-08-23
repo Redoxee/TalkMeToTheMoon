@@ -16,6 +16,8 @@ FXManager = {
 
 	Draw = function(o)
 		o:DrawRedContour()
+
+		o.GreenZone:ApplyEffect()
 	end,
 
 	RedContourTarget = false,
@@ -36,4 +38,22 @@ FXManager = {
 		    love.graphics.setShader()
 		end
 	end,
+
+	GreenZone = {
+		PolygonPoints = false,
+
+		ApplyEffect = function(o)
+			if o.PolygonPoints and #o.PolygonPoints > 2 then
+				love.graphics.setColor(255,255,255)
+				local points = {}
+				for i = 1,#o.PolygonPoints do
+					p = o.PolygonPoints[i]
+					ListInsert(points, p.x)
+					ListInsert(points, p.y)
+				end
+
+				love.graphics.polygon("fill",points)
+			end
+		end,
+	},
 }

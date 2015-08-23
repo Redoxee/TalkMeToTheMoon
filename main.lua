@@ -55,25 +55,27 @@ Launcher = {
 
 	Initialize = function(o)
 
-		MouseHold.PressFunction = function(holder)
-			o:OnPress(holder)
+		MouseHold.PressFunction = function()
+			o:OnPress()
 		end
 
-		MouseHold.ReleaseFunction = function(holder)
-			o:OnRelease(holder)
+		MouseHold.ReleaseFunction = function()
+			o:OnRelease()
 		end
 
-		MouseHold.DragFunction = function(holder)
-			o:OnDrag(holder)
+		MouseHold.DragFunction = function()
+			o:OnDrag()
 		end
 	end,
 
 
 	Draw = function(o)
-		-- love.graphics.setColor(128,128,128)
-		-- love.graphics.circle("fill",o.Position.x,o.Position.y,5)
 
 		if o.ChargeVector then
+
+			love.graphics.setColor(128,128,255)
+			love.graphics.circle("fill",o.Position.x,o.Position.y,4.5)
+
 			local vPos = o.Position + o.ChargeVector
 			love.graphics.setColor(64,128,192)
 			love.graphics.line(o.Position.x,o.Position.y, vPos.x,vPos.y)
@@ -83,17 +85,17 @@ Launcher = {
 	Update = function(o,dt)
 	end,
 
-	ComputCharge = function(o,holder)
-		local direction = holder.Position - holder.StartPosition
+	ComputCharge = function(o)
+		local direction = MouseHold.Position - MouseHold.StartPosition
 		o.ChargeVector = direction:normalized() * math.sqrt(direction:len()) * 4
 	end,
 
-	OnPress = function(o,holder)
-		o.Position = holder.StartPosition
+	OnPress = function(o)
+		o.Position = MouseHold.StartPosition
 	end,
 
-	OnRelease = function(o,holder)
-		o:ComputCharge(holder)
+	OnRelease = function(o)
+		o:ComputCharge()
 
 		o:Launch(o.ChargeVector)
 		-- o:Spread(o.ChargeVector:len(), 100)
@@ -101,8 +103,8 @@ Launcher = {
 		o.ChargeVector = false
 	end,
 
-	OnDrag = function(o,holder)
-		o:ComputCharge(holder)
+	OnDrag = function(o)
+		o:ComputCharge()
 	end,
 
 	Spread = function(o, force, iteration)
@@ -125,7 +127,6 @@ Launcher = {
 		-- Print(tostring(#Projectils))
 	end,
 }
-
 
 Projectils= {
 	--[[
@@ -301,6 +302,13 @@ _DotPointManager = {
 	end,
 }
 
+LaunchZone = {
+	Points = {},
+	Initialize = function(o)
+		FXManager.GreenZone.PolygonPoints = o.Points
+	end,
+}
+
 World = {
 	LevelIndex = false,
 	LevelsAvailable = {"Level1","Level2","Level3","Level4"},
@@ -338,7 +346,7 @@ Controller = {
 	DeleteTarget = false,
 
 	Initialize = function(o)
-		MouseHold.RReleaseFunction = function()
+		MouseHold.RPressFunction = function()
 				o:OnDeleteAction()
 			end
 	end,
@@ -374,6 +382,7 @@ Initialize = function()
 	Launcher:Initialize()
 	FXManager:Initialize()
 	Controller:Initialize()
+	LaunchZone:Initialize()
 
 
 	table.insert(Updatables, Launcher)

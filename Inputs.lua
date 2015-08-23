@@ -1,14 +1,15 @@
 MouseHold = {
 	Position = vector(0,0),
 	StartPosition = vector(0,0),
-	RDown = false,
-	LDown = false,
+	Field_l = false,
+	Field_r = false,
+	Field_m = false,
 
 	PressFunction = false,
 	ReleaseFunction = false,
 	DragFunction = false,
 
-	RReleaseFunction = false,
+	RPressFunction = false,
 }
 
 KeyboardHolder = {
@@ -47,38 +48,46 @@ KeyboardHolder = {
 	end,
 }
 
+function checkMouseInput(input,downFunction,releaseFunction,dragFunction)
+	local d = love.mouse.isDown(input)
+	local inputField = "Field_" .. input
+	local prevInput = MouseHold[inputField]
+	if d then
+		if prevInput then
+			if dragFunction then
+				dragFunction()
+			end
+		else
+			if downFunction then
+				downFunction()
+			end
+		end
+	else
+		if prevInput and releaseFunction then
+			releaseFunction()
+		end
+	end
+	MouseHold[inputField] = d
+end
+
+
+
 function handleInputs()
 	local d = love.mouse.isDown('l')
 	local curPos = vector(love.mouse.getPosition())
-	if d then
-		if MouseHold.LDown then
-			if MouseHold.DragFunction then
-				MouseHold.DragFunction(MouseHold)
-			end
-		else
-			MouseHold.StartPosition = curPos
-			if MouseHold.PressFunction then
-				MouseHold.PressFunction(MouseHold)
-			end
-		end
-	else
-		if MouseHold.LDown and MouseHold.ReleaseFunction then
-			MouseHold.ReleaseFunction(MouseHold)
-		end
-	end
-	MouseHold.LDown = d
-	d = love.mouse.isDown('r')
-	if d then
-		if MouseHold.RDown then
-		else
-		end
-	else
-		if MouseHold.RDown and MouseHold.RReleaseFunction then
-			MouseHold.RReleaseFunction(MouseHold)
+	local ldfunc = function()
+		MouseHold.StartPosition = curPos
+		if MouseHold.PressFunction then
+			MouseHold.PressFunction()
 		end
 	end
 
-	MouseHold.RDown = d
+	checkMouseInput('l',ldfunc,MouseHold.ReleaseFunction,MouseHold.DragFunction)
+	checkMouseInput('r',MouseHold.RPressFunction)
+	checkMouseInput("m", function()
+			Print("mouse position " ..  tostring(curPos))
+			ListInsert(LaunchZone.Points,curPos)
+		end)
 	MouseHold.Position = curPos
 
 	KeyboardHolder:Update()
