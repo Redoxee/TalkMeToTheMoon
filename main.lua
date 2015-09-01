@@ -2,7 +2,9 @@ vector = require "utils.hump.vector"
 require "functionLib"
 require "Levels"
 require "Inputs"
+require "Bezier"
 require "FXManager"
+require "Ship"
 
 MAX_DT = 0.1
 
@@ -105,13 +107,33 @@ Launcher = {
 
 	OnDrag = function(o)
 		o:ComputCharge()
+		o:Spread(o.ChargeVector:len(),o.ChargeVector,1)
 	end,
 
-	Spread = function(o, force, iteration)
+	Pulse = function(o, force, iteration)
 		for i = 0,iteration do
 			local a = math.pi * 2 * i / iteration
 			local x,y = math.cos(a), math.sin(a)
 			o:Launch(vector(x,y) * force)
+		end
+	end,
+
+
+	SpreadRandomRadius = .25,
+	_GetRandomSpreadVector = function(o)
+		local r = math.random() * 2 * math.pi
+		return vector(math.cos(r),math.sin(r)) * o.SpreadRandomRadius * math.random()
+	end,
+
+	Spread = function(o, force, direction, spreadRate)
+		for i = 1,spreadRate do
+			local vec = direction:normalized() + o:_GetRandomSpreadVector()
+			vec = vec * force
+			local proj = {
+				Position = o.Position,
+				Velocity = vec,
+			}
+			ProjectilManager:AddProjectil(proj)
 		end
 	end,
 
@@ -123,8 +145,18 @@ Launcher = {
 			Velocity = velocity,
 		}
 
-		table.insert(Projectils,proj)
-		-- Print(tostring(#Projectils))
+		ProjectilManager:AddProjectil(proj)
+	end,
+}
+
+
+ProjectilManager = {
+	HardCap = 500,
+	
+	AddProjectil = function(o,proj)
+		if #Projectils < o.HardCap then
+			ListInsert(Projectils,proj)
+		end
 	end,
 }
 
@@ -138,7 +170,6 @@ Projectils= {
 	--]]
 }
 Collidables = {}
-
 _Projectils = {
 
 	Initialize = function(o)
@@ -273,7 +304,7 @@ _DeadProjectils = {
 DotPoints = {}
 _DotPointManager = {
 	Accumulator = 0,
-	DotDuration = 3,
+	DotDuration = 1,
 	Initialize = function(o)
 		DotPoints = {}
 	end,
@@ -385,23 +416,26 @@ Initialize = function()
 	LaunchZone:Initialize()
 
 
+
+
 	table.insert(Updatables, Launcher)
 	table.insert(Updatables, CurrentLevel)
 	table.insert(Updatables, _Projectils)
 	table.insert(Updatables, _DotPointManager)
 	table.insert(Updatables, Controller)
-	table.insert(Updatables, FXManager)
+	-- table.insert(Updatables, FXManager)
+	-- table.insert(Updatables, Ship)
 
 	table.insert(Drawables, _DotPointManager)
 	table.insert(Drawables, CurrentLevel)
 	table.insert(Drawables, Launcher)
 	-- table.insert(Drawables, _DeadProjectils)
 	table.insert(Drawables, _Projectils)
-	table.insert(Drawables, FXManager)
-
+	-- table.insert(Drawables, FXManager)
+	-- table.insert(Drawables, Ship)
 end
 
-KeyboardHolder:RegisterListener("p",function() Launcher:Spread(105,120) end )
+KeyboardHolder:RegisterListener("p",function() Launcher:Pulse(95,120) end )
 
 WindowSize = {900,800}
 function love.load(arg)
@@ -436,7 +470,6 @@ function love.draw()
 	for i = 1,#Drawables do
 		Drawables[i]:Draw()
 	end
-
 end
 
 Updatables = {}
