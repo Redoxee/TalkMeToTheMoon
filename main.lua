@@ -223,7 +223,7 @@ _Projectils = {
 			if not removed then
 				local dist = p.Position:dist2(vector(WindowSize[1],WindowSize[2]) / 2)
 				if dist > MAX_DISTANCE2 then
-					Print(tostring(dist))
+					-- Print(tostring(dist))
 					table.insert(o.ToRemoves, i)
 					removed = true
 				end
@@ -309,7 +309,7 @@ _DotPointManager = {
 		DotPoints = {}
 	end,
 	AddPoint = function(o,position)
-		ListInsert(DotPoints,1,{Position = position , Stamp = o.Accumulator + o.DotDuration})
+		-- ListInsert(DotPoints,1,{Position = position , Stamp = o.Accumulator + o.DotDuration})
 	end,
 
 	Update = function(o,dt)
@@ -417,7 +417,7 @@ Initialize = function()
 
 
 
-
+	---[[
 	table.insert(Updatables, Launcher)
 	table.insert(Updatables, CurrentLevel)
 	table.insert(Updatables, _Projectils)
@@ -425,7 +425,9 @@ Initialize = function()
 	table.insert(Updatables, Controller)
 	-- table.insert(Updatables, FXManager)
 	-- table.insert(Updatables, Ship)
+	--]]
 
+	---[[
 	table.insert(Drawables, _DotPointManager)
 	table.insert(Drawables, CurrentLevel)
 	table.insert(Drawables, Launcher)
@@ -433,6 +435,7 @@ Initialize = function()
 	table.insert(Drawables, _Projectils)
 	-- table.insert(Drawables, FXManager)
 	-- table.insert(Drawables, Ship)
+	--]]
 end
 
 KeyboardHolder:RegisterListener("p",function() Launcher:Pulse(95,120) end )
