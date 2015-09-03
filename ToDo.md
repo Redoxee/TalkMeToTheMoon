@@ -1,7 +1,6 @@
 To Do List
 ==========
 
-* Smile Object
 * Eyes Object
 * GUI Manager
 * GUI Buttons
@@ -9,7 +8,6 @@ To Do List
 * Cosmetic Projectil
 * Callback on projectils
 * Gauges
-* Damping functions
 * Camera
 * Profiling
 * Launch Zone

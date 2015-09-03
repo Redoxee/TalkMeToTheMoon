@@ -5,6 +5,7 @@ require "Inputs"
 require "Bezier"
 require "FXManager"
 require "Ship"
+require "Face"
 
 MAX_DT = 0.1
 
@@ -119,15 +120,21 @@ Launcher = {
 	end,
 
 
-	SpreadRandomRadius = .25,
 	_GetRandomSpreadVector = function(o)
 		local r = math.random() * 2 * math.pi
-		return vector(math.cos(r),math.sin(r)) * o.SpreadRandomRadius * math.random()
+		return vector(math.cos(r),math.sin(r)) * math.random()
 	end,
 
+	SpreadMaxRadius = .28,
+	SpreadMinRadius = .13,
+	SpreadRadiusForceMin = 60,
+	SpreadRadiusForceMax = 90,
 	Spread = function(o, force, direction, spreadRate)
 		for i = 1,spreadRate do
-			local vec = direction:normalized() + o:_GetRandomSpreadVector()
+			local p = math.min(o.SpreadRadiusForceMax, math.max(o.SpreadRadiusForceMin,force))
+			p = (p - o.SpreadRadiusForceMin)/(o.SpreadRadiusForceMax - o.SpreadRadiusForceMin)
+			p = (o.SpreadMaxRadius - o.SpreadMinRadius) * (1-p) + o.SpreadMinRadius
+			local vec = direction:normalized() + o:_GetRandomSpreadVector() * p
 			vec = vec * force
 			local proj = {
 				Position = o.Position,
@@ -415,14 +422,13 @@ Initialize = function()
 	Controller:Initialize()
 	LaunchZone:Initialize()
 
-
-
 	---[[
 	table.insert(Updatables, Launcher)
 	table.insert(Updatables, CurrentLevel)
 	table.insert(Updatables, _Projectils)
 	table.insert(Updatables, _DotPointManager)
 	table.insert(Updatables, Controller)
+	table.insert(Updatables, SmileManager)
 	-- table.insert(Updatables, FXManager)
 	-- table.insert(Updatables, Ship)
 	--]]
@@ -433,6 +439,7 @@ Initialize = function()
 	table.insert(Drawables, Launcher)
 	-- table.insert(Drawables, _DeadProjectils)
 	table.insert(Drawables, _Projectils)
+	table.insert(Drawables, SmileManager)
 	-- table.insert(Drawables, FXManager)
 	-- table.insert(Drawables, Ship)
 	--]]

@@ -34,3 +34,8 @@ function tablecopy(orig)
     end
     return copy
 end
+
+
+function damping(f,p,t,dt)
+    return p + ((t - p) / f * dt)
+end
