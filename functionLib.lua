@@ -3,6 +3,15 @@ ListRemove = table.remove
 ListSort = table.sort
 Print = print
 
+ListFind = function(l,e)
+    for k,v in pairs(l) do
+        if v == e then
+            return k
+        end
+    end
+    return false
+end
+
 Max = math.max
 Min = math.min
 

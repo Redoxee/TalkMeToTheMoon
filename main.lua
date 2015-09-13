@@ -1,4 +1,4 @@
-vector = require "utils.hump.vector"
+vector = require "Utils.HUMP.vector"
 require "functionLib"
 require "Levels"
 require "Inputs"
@@ -6,6 +6,7 @@ require "Bezier"
 require "FXManager"
 require "Ship"
 require "Face"
+require "Gauges"
 
 MAX_DT = 0.1
 
@@ -58,34 +59,43 @@ Launcher = {
 
 	Initialize = function(o)
 
-		MouseHold.PressFunction = function()
-			o:OnPress()
-		end
+		RegisterMouseInput("l","down", function() o:OnPress() end)
+		RegisterMouseInput("l","drag", function() o:OnDrag() end)
+		RegisterMouseInput("l","up", function() o:OnRelease() end)
 
-		MouseHold.ReleaseFunction = function()
-			o:OnRelease()
-		end
-
-		MouseHold.DragFunction = function()
-			o:OnDrag()
-		end
 	end,
 
 
 	Draw = function(o)
 
+
+		love.graphics.setColor(128,128,255)
+		love.graphics.circle("fill",o.Position.x,o.Position.y,4.5)
+
 		if o.ChargeVector then
-
-			love.graphics.setColor(128,128,255)
-			love.graphics.circle("fill",o.Position.x,o.Position.y,4.5)
-
 			local vPos = o.Position + o.ChargeVector
 			love.graphics.setColor(64,128,192)
 			love.graphics.line(o.Position.x,o.Position.y, vPos.x,vPos.y)
 		end
  	end,
 
+ 	MoveSpeed = 30,
+	PadForce = 70,
+	CurrentCharge = false,
 	Update = function(o,dt)
+		local displacment = GPad.Left * o.MoveSpeed * dt
+		o.Position = o.Position + displacment
+	
+		local force = GPad.Right
+		if force:len2() > 0.05 then
+			force = force * o.PadForce
+
+			o.CurrentCharge = force
+			
+			o:Spread(force:len(),force,1)
+		else
+			o.CurrentCharge = false
+		end
 	end,
 
 	ComputCharge = function(o)
@@ -125,10 +135,10 @@ Launcher = {
 		return vector(math.cos(r),math.sin(r)) * math.random()
 	end,
 
-	SpreadMaxRadius = .28,
-	SpreadMinRadius = .13,
-	SpreadRadiusForceMin = 60,
-	SpreadRadiusForceMax = 90,
+	SpreadMaxRadius = .5,
+	SpreadMinRadius = .0,
+	SpreadRadiusForceMin = 40,
+	SpreadRadiusForceMax = 130,
 	Spread = function(o, force, direction, spreadRate)
 		for i = 1,spreadRate do
 			local p = math.min(o.SpreadRadiusForceMax, math.max(o.SpreadRadiusForceMin,force))
@@ -159,11 +169,27 @@ Launcher = {
 
 ProjectilManager = {
 	HardCap = 500,
-	
+
+	Gauge = false,	
 	AddProjectil = function(o,proj)
 		if #Projectils < o.HardCap then
+			proj.StartTime = AbsolutTime
 			ListInsert(Projectils,proj)
 		end
+	end,
+
+
+	Initialize = function(o)
+		if not o.Gauge then
+			o.Gauge = CreateGauge({
+				Position = vector(60,600),
+				Size = vector(30,200)
+			})
+		end
+	end,
+
+	Update = function(o,dt)
+		o.Gauge.Completion = 1 - #Projectils / o.HardCap
 	end,
 }
 
@@ -221,7 +247,7 @@ _Projectils = {
 			local removed = false
 			for j,r2 in ipairs(r2s) do
 				if p.Position:dist2(masses[j].Position) < r2 then
-					table.insert(DeadProjectils,p.Position)
+					_DeadProjectils:AddDeadProjectil(p.Position)
 					table.insert(o.ToRemoves, i)
 					removed = true
 					break
@@ -294,16 +320,25 @@ end
 
 DeadProjectils = {}
 _DeadProjectils = {
+	IsEnabled = false,
 	Projectils = {},
 	Initialize = function(o)
 		DeadProjectils = {}
 	end,
 
 	Draw = function(o)
-		love.graphics.setColor(255,127,0)
-		for i = 1, #DeadProjectils do
-			local p = DeadProjectils[i]
-			love.graphics.circle("fill",p.x,p.y,4)
+		if o.IsEnabled then
+			love.graphics.setColor(255,127,0)
+			for i = 1, #DeadProjectils do
+				local p = DeadProjectils[i]
+				love.graphics.circle("fill",p.x,p.y,4)
+			end
+		end
+	end,
+
+	AddDeadProjectil = function(o,position)
+		if o.IsEnabled then
+			table.insert(DeadProjectils,position)
 		end
 	end,
 }
@@ -316,7 +351,7 @@ _DotPointManager = {
 		DotPoints = {}
 	end,
 	AddPoint = function(o,position)
-		-- ListInsert(DotPoints,1,{Position = position , Stamp = o.Accumulator + o.DotDuration})
+		ListInsert(DotPoints,1,{Position = position , Stamp = o.Accumulator + o.DotDuration})
 	end,
 
 	Update = function(o,dt)
@@ -358,23 +393,38 @@ World = {
 		local nLevel = function()
 			o:OnNextPressed()
 		end
+		local pLevel = function()
+			o:OnPrevPressed()
+		end
 		
 		KeyboardHolder:RegisterListener("n",nLevel)
+		GPad:RegisterListener("rightshoulder",nLevel)
+		GPad:RegisterListener("leftshoulder",pLevel)
 	end,
 
 	OnNextPressed = function(o)
+		local i = ((o.LevelIndex) % #o.LevelsAvailable) + 1
+		o:SwitchLevel(i)
+	end,
+	
+	OnPrevPressed = function(o)
+		local i = o.LevelIndex - 1
+		if i < 1 then 
+			i = #o.LevelsAvailable
+		end
+		o:SwitchLevel(i)
+	end,
+
+	SwitchLevel = function(o,levelIndex)
 		AbsolutTime = 0
-		o.LevelIndex = ((o.LevelIndex) % #o.LevelsAvailable) + 1
-
+		o.LevelIndex = levelIndex
 		Print("Level index : " .. tostring(o.LevelIndex) )
-
 		-- clear projectiles
 		_Projectils:Initialize()
 		_DotPointManager:Initialize()
 		_DeadProjectils:Initialize()
 		-- load level
 		LoadLevel(o.LevelsAvailable[o.LevelIndex])
-
 	end,
 }
 
@@ -384,9 +434,7 @@ Controller = {
 	DeleteTarget = false,
 
 	Initialize = function(o)
-		MouseHold.RPressFunction = function()
-				o:OnDeleteAction()
-			end
+		RegisterMouseInput("r","down", function() o:OnDeleteAction() end)
 	end,
 
 	Update = function(o)
@@ -417,18 +465,22 @@ Controller = {
 
 Initialize = function()
 	World:Initialize()
+	GaugeManager:Initialize()
 	Launcher:Initialize()
 	FXManager:Initialize()
 	Controller:Initialize()
+	ProjectilManager:Initialize()
 	LaunchZone:Initialize()
 
 	---[[
 	table.insert(Updatables, Launcher)
+	table.insert(Updatables, ProjectilManager)
 	table.insert(Updatables, CurrentLevel)
 	table.insert(Updatables, _Projectils)
 	table.insert(Updatables, _DotPointManager)
 	table.insert(Updatables, Controller)
 	table.insert(Updatables, SmileManager)
+	table.insert(Updatables, GaugeManager)
 	-- table.insert(Updatables, FXManager)
 	-- table.insert(Updatables, Ship)
 	--]]
@@ -437,9 +489,10 @@ Initialize = function()
 	table.insert(Drawables, _DotPointManager)
 	table.insert(Drawables, CurrentLevel)
 	table.insert(Drawables, Launcher)
-	-- table.insert(Drawables, _DeadProjectils)
 	table.insert(Drawables, _Projectils)
 	table.insert(Drawables, SmileManager)
+	table.insert(Drawables, GaugeManager)
+	table.insert(Drawables, _DeadProjectils)
 	-- table.insert(Drawables, FXManager)
 	-- table.insert(Drawables, Ship)
 	--]]
@@ -469,6 +522,10 @@ DebugDraw = function()
 	love.graphics.print("Steps : " .. tostring(IntegrationStep), 15, h)
 	h = h + s
 	love.graphics.print("Projectils : " .. tostring(#Projectils),15,h)
+	if #Projectils > 0 then
+		h = h + s
+		love.graphics.print("Max Life Time : " .. tostring(AbsolutTime - Projectils[1].StartTime),15,h)
+	end
 end
 
 
