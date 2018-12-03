@@ -2,11 +2,7 @@ vector = require "Utils.HUMP.vector"
 require "functionLib"
 require "Levels"
 require "Inputs"
-require "Bezier"
 require "FXManager"
-require "Ship"
-require "Face"
-require "Gauges"
 
 MAX_DT = 0.1
 
@@ -180,16 +176,9 @@ ProjectilManager = {
 
 
 	Initialize = function(o)
-		if not o.Gauge then
-			o.Gauge = CreateGauge({
-				Position = vector(60,600),
-				Size = vector(30,200)
-			})
-		end
 	end,
 
 	Update = function(o,dt)
-		o.Gauge.Completion = 0 --1 - #Projectils / o.HardCap
 	end,
 }
 
@@ -465,7 +454,6 @@ Controller = {
 
 Initialize = function()
 	World:Initialize()
-	GaugeManager:Initialize()
 	Launcher:Initialize()
 	FXManager:Initialize()
 	Controller:Initialize()
@@ -479,8 +467,6 @@ Initialize = function()
 	table.insert(Updatables, _Projectils)
 	table.insert(Updatables, _DotPointManager)
 	table.insert(Updatables, Controller)
-	table.insert(Updatables, SmileManager)
-	table.insert(Updatables, GaugeManager)
 	-- table.insert(Updatables, FXManager)
 	-- table.insert(Updatables, Ship)
 	--]]
@@ -490,8 +476,6 @@ Initialize = function()
 	table.insert(Drawables, CurrentLevel)
 	table.insert(Drawables, Launcher)
 	table.insert(Drawables, _Projectils)
-	table.insert(Drawables, SmileManager)
-	table.insert(Drawables, GaugeManager)
 	table.insert(Drawables, _DeadProjectils)
 	-- table.insert(Drawables, FXManager)
 	-- table.insert(Drawables, Ship)
