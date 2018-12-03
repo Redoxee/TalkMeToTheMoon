@@ -4,25 +4,25 @@ require "Levels"
 require "Inputs"
 require "FXManager"
 
-MAX_DT = 0.1
+MAX_DT = 0.08
 
 TIMEFACTOR = 2
 
 MAX_DISTANCE2 = 800 * 800
 
-function GetForce (position, objects, dt) 
+function GetForce(position, mass, objects, dt) 
 	local cumulativForces = vector(0,0)
 	for i = 1,#objects do
 		obj = objects[i]
 		local dif = ( obj.Position - position)
-		cumulativForces = cumulativForces + dif:normalized() * (obj.Masse) / dif:len2()
+		cumulativForces = cumulativForces + dif:normalized() * mass * obj.Masse / dif:len2()
 	end
 	return cumulativForces
 end
 
 IntegrationStep = 0
 
-function Integrate (originalPosition,originalVelocity,originalAcceleration , objects, dt , maxDt)
+function Integrate(originalPosition, originalVelocity, originalAcceleration, mass, objects, dt, maxDt)
 	local r = dt / maxDt
 	local iteration,rest = math.floor(dt/maxDt) , dt%maxDt
 
@@ -34,13 +34,13 @@ function Integrate (originalPosition,originalVelocity,originalAcceleration , obj
 
 	if iteration > 0 then
 		for i = 1,iteration do
-			acceleration =  GetForce(position,objects,maxDt)
+			acceleration =  GetForce(position, mass, objects, maxDt)
 			velocity = velocity + acceleration * maxDt
 			position = position + velocity * maxDt
 		end
 	end
 
-	acceleration = GetForce(position, objects, rest)
+	acceleration = GetForce(position, mass, objects, rest)
 	velocity = velocity + acceleration * rest
 	position = position + velocity * rest
 
@@ -63,8 +63,6 @@ Launcher = {
 
 
 	Draw = function(o)
-
-
 		love.graphics.setColor(128,128,255)
 		love.graphics.circle("fill",o.Position.x,o.Position.y,4.5)
 
@@ -100,21 +98,19 @@ Launcher = {
 	end,
 
 	OnPress = function(o)
-		o.Position = MouseHold.StartPosition
+		-- o.Position = MouseHold.StartPosition
 	end,
 
 	OnRelease = function(o)
 		o:ComputCharge()
 
 		o:Launch(o.ChargeVector)
-		-- o:Spread(o.ChargeVector:len(), 100)
 		
 		o.ChargeVector = false
 	end,
 
 	OnDrag = function(o)
 		o:ComputCharge()
-		o:Spread(o.ChargeVector:len(),o.ChargeVector,1)
 	end,
 
 	Pulse = function(o, force, iteration)
@@ -142,11 +138,7 @@ Launcher = {
 			p = (o.SpreadMaxRadius - o.SpreadMinRadius) * (1-p) + o.SpreadMinRadius
 			local vec = direction:normalized() + o:_GetRandomSpreadVector() * p
 			vec = vec * force
-			local proj = {
-				Position = o.Position,
-				Velocity = vec,
-			}
-			ProjectilManager:AddProjectil(proj)
+			o:Launch(vec)
 		end
 	end,
 
@@ -156,6 +148,7 @@ Launcher = {
 		local proj = {
 			Position = o.Position,
 			Velocity = velocity,
+			Mass = 2,
 		}
 
 		ProjectilManager:AddProjectil(proj)
@@ -164,16 +157,14 @@ Launcher = {
 
 
 ProjectilManager = {
-	HardCap = 500,
+	HardCap = 1500,
 
-	Gauge = false,	
-	AddProjectil = function(o,proj)
+	AddProjectil = function(o, proj)
 		if #Projectils < o.HardCap then
 			proj.StartTime = AbsolutTime
 			ListInsert(Projectils,proj)
 		end
 	end,
-
 
 	Initialize = function(o)
 	end,
@@ -191,7 +182,9 @@ Projectils= {
 		},
 	--]]
 }
+
 Collidables = {}
+
 _Projectils = {
 
 	Initialize = function(o)
@@ -231,7 +224,7 @@ _Projectils = {
 		for i = 1, #Projectils do
 			p = Projectils[i]
 	
-			p.Position, p.Velocity = Integrate(p.Position, p.Velocity, vector(0,0),masses,dt, MAX_DT)
+			p.Position, p.Velocity = Integrate(p.Position, p.Velocity, vector(0,0), p.Mass, masses,dt, MAX_DT)
 		
 			local removed = false
 			for j,r2 in ipairs(r2s) do
@@ -482,7 +475,7 @@ Initialize = function()
 	--]]
 end
 
-KeyboardHolder:RegisterListener("p",function() Launcher:Pulse(95,120) end )
+KeyboardHolder:RegisterListener("p",function() Launcher:Pulse(120,1000) end )
 
 WindowSize = {900,800}
 function love.load(arg)
