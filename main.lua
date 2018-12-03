@@ -189,7 +189,7 @@ ProjectilManager = {
 	end,
 
 	Update = function(o,dt)
-		o.Gauge.Completion = 1 - #Projectils / o.HardCap
+		o.Gauge.Completion = 0 --1 - #Projectils / o.HardCap
 	end,
 }
 

@@ -67,11 +67,12 @@ function _callMouseInput(inputField)
 	end
 end
 
-function checkMouseInput(input)
+function checkMouseInput(input, alias)
 	local d = love.mouse.isDown(input)
-	local inputField = "Field_" .. input
+	
+	local inputField = "Field_" .. alias
 	local prevInput = MouseHold[inputField]
-	local callBackprefix = input .. "_"
+	local callBackprefix = alias .. "_"
 	if d then
 		if prevInput then
 			_callMouseInput(callBackprefix .. "drag")
@@ -169,12 +170,11 @@ end
 
 
 function handleInputs()
-	local d = love.mouse.isDown('l')
 	local curPos = vector(love.mouse.getPosition())
 	MouseHold.Position = curPos
-	checkMouseInput('l')
-	checkMouseInput('r')
-	checkMouseInput("m")
+	checkMouseInput(1, 'l')
+	checkMouseInput(2, 'r')
+	checkMouseInput(3, 'm')
 
 	KeyboardHolder:Update()
 	GPad:UpdateInputs()
