@@ -73,28 +73,14 @@ Launcher = {
 		end
  	end,
 
- 	MoveSpeed = 30,
-	PadForce = 70,
-	CurrentCharge = false,
 	Update = function(o,dt)
-		local displacment = GPad.Left * o.MoveSpeed * dt
-		o.Position = o.Position + displacment
-	
-		local force = GPad.Right
-		if force:len2() > 0.05 then
-			force = force * o.PadForce
-
-			o.CurrentCharge = force
-			
-			o:Spread(force:len(),force,1)
-		else
-			o.CurrentCharge = false
-		end
 	end,
 
 	ComputCharge = function(o)
 		local direction = MouseHold.Position - MouseHold.StartPosition
 		o.ChargeVector = direction:normalized() * math.sqrt(direction:len()) * 4
+
+		PreviewManager:ComputPreview(o.Position, o.ChargeVector, 1)
 	end,
 
 	OnPress = function(o)
@@ -148,10 +134,11 @@ Launcher = {
 		local proj = {
 			Position = o.Position,
 			Velocity = velocity,
-			Mass = 2,
+			Mass = 1,
 		}
 
 		ProjectilManager:AddProjectil(proj)
+		PreviewManager:ClearPreview()
 	end,
 }
 
@@ -181,6 +168,48 @@ Projectils= {
 			Mass = ...
 		},
 	--]]
+}
+
+
+PreviewManager = {
+	PreviewDots = {},
+	PreviewColor = {64,64,128}, 	
+	StepCount = 128,
+	StepLength = .16,
+
+	ComputPreview = function(o, startPosition, velocity, mass)
+		o.PreviewDots = {startPosition}
+		currentPos = startPosition
+		currentVelocity = velocity
+		
+		for i = 2, o.StepCount do
+			currentPos, currentVelocity = Integrate(currentPos, currentVelocity,  vector(0,0), mass, CurrentLevel.Planets, o.StepLength, 10000)
+			o.PreviewDots[i] = currentPos
+
+			for i = 1, #CurrentLevel.Planets do
+				local planet = CurrentLevel.Planets[i]
+				local dist2 = currentPos:dist2(planet.Position)
+				local r2 = _Projectils.ProjectilRadius + (planet.Radius or 0) 
+				r2 = r2 * r2
+				if dist2 < r2 then
+					return
+				end 
+			end
+		end
+	end,
+
+	ClearPreview = function(o)
+		o.PreviewDots = {}
+	end,
+
+	Draw = function(o)
+		love.graphics.setColor(o.PreviewColor[1], o.PreviewColor[2], o.PreviewColor[3])
+
+		for i = 1,#o.PreviewDots do
+			local d = o.PreviewDots[i]
+			love.graphics.circle("fill" ,d.x ,d.y ,1)
+		end
+	end,
 }
 
 Collidables = {}
@@ -405,6 +434,7 @@ World = {
 		_Projectils:Initialize()
 		_DotPointManager:Initialize()
 		_DeadProjectils:Initialize()
+		PreviewManager:ClearPreview()
 		-- load level
 		LoadLevel(o.LevelsAvailable[o.LevelIndex])
 	end,
@@ -470,6 +500,7 @@ Initialize = function()
 	table.insert(Drawables, Launcher)
 	table.insert(Drawables, _Projectils)
 	table.insert(Drawables, _DeadProjectils)
+	table.insert(Drawables, PreviewManager)
 	-- table.insert(Drawables, FXManager)
 	-- table.insert(Drawables, Ship)
 	--]]
