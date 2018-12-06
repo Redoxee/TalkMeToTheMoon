@@ -174,18 +174,23 @@ Projectils= {
 PreviewManager = {
 	PreviewDots = {},
 	PreviewColor = {64,64,128}, 	
-	StepCount = 128,
-	StepLength = .16,
+	StepCount = 64,
+	StepSkipped = 10,
+	StepLength = 0.032,
+	
 
 	ComputPreview = function(o, startPosition, velocity, mass)
-		o.PreviewDots = {startPosition}
+		o.PreviewDots = {}
 		currentPos = startPosition
 		currentVelocity = velocity
 		
-		for i = 2, o.StepCount do
-			currentPos, currentVelocity = Integrate(currentPos, currentVelocity,  vector(0,0), mass, CurrentLevel.Planets, o.StepLength, 10000)
-			o.PreviewDots[i] = currentPos
+		for i = 1, o.StepCount do
+			for j = 1,o.StepSkipped do
+				currentPos, currentVelocity = Integrate(currentPos, currentVelocity,  vector(0,0), mass, CurrentLevel.Planets, o.StepLength, 10000)
+			end
 
+			o.PreviewDots[i] = currentPos
+			
 			for i = 1, #CurrentLevel.Planets do
 				local planet = CurrentLevel.Planets[i]
 				local dist2 = currentPos:dist2(planet.Position)
@@ -475,7 +480,12 @@ Controller = {
 	end,
 }
 
+LetterImage = false
+
 Initialize = function()
+	
+	LetterImage = love.graphics.newImage("Medias/Letter.png")
+
 	World:Initialize()
 	Launcher:Initialize()
 	FXManager:Initialize()
@@ -545,6 +555,8 @@ function love.draw()
 	for i = 1,#Drawables do
 		Drawables[i]:Draw()
 	end
+
+	love.graphics.draw(LetterImage,100,100)
 end
 
 Updatables = {}
