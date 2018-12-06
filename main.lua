@@ -177,6 +177,9 @@ PreviewManager = {
 	StepCount = 64,
 	StepSkipped = 10,
 	StepLength = 0.032,
+	AnimSpeed = 1 / 10,
+	AnimTimer = 0,
+	AnimStep = 0,
 	
 
 	ComputPreview = function(o, startPosition, velocity, mass)
@@ -184,27 +187,48 @@ PreviewManager = {
 		currentPos = startPosition
 		currentVelocity = velocity
 		
+		
+		for i = 0, 1 do
+			currentPos, currentVelocity = Integrate(currentPos, currentVelocity,  vector(0,0), mass, CurrentLevel.Planets, o.StepLength, 10000)
+		end
+
+		for i = 0,o.AnimStep do
+			currentPos, currentVelocity = Integrate(currentPos, currentVelocity,  vector(0,0), mass, CurrentLevel.Planets, o.StepLength, 10000)
+		end
+
 		for i = 1, o.StepCount do
 			for j = 1,o.StepSkipped do
 				currentPos, currentVelocity = Integrate(currentPos, currentVelocity,  vector(0,0), mass, CurrentLevel.Planets, o.StepLength, 10000)
+				
+				for i = 1, #CurrentLevel.Planets do
+					local planet = CurrentLevel.Planets[i]
+					local dist2 = currentPos:dist2(planet.Position)
+					local r2 = (planet.Radius or 0) 
+					r2 = r2 * r2
+					if dist2 < r2 then
+						return
+					end 
+				end
 			end
 
 			o.PreviewDots[i] = currentPos
-			
-			for i = 1, #CurrentLevel.Planets do
-				local planet = CurrentLevel.Planets[i]
-				local dist2 = currentPos:dist2(planet.Position)
-				local r2 = _Projectils.ProjectilRadius + (planet.Radius or 0) 
-				r2 = r2 * r2
-				if dist2 < r2 then
-					return
-				end 
-			end
 		end
 	end,
 
 	ClearPreview = function(o)
 		o.PreviewDots = {}
+	end,
+
+	Update = function(o, dt)
+		o.AnimTimer = o.AnimTimer + dt
+		if o.AnimTimer > o.AnimSpeed then
+			o.AnimTimer = 0
+			o.AnimStep = o.AnimStep + 1
+			if o.AnimStep >= o.StepSkipped then
+				o.AnimStep = 0
+			end
+		end
+
 	end,
 
 	Draw = function(o)
@@ -493,27 +517,20 @@ Initialize = function()
 	ProjectilManager:Initialize()
 	LaunchZone:Initialize()
 
-	---[[
 	table.insert(Updatables, Launcher)
 	table.insert(Updatables, ProjectilManager)
 	table.insert(Updatables, CurrentLevel)
 	table.insert(Updatables, _Projectils)
 	table.insert(Updatables, _DotPointManager)
 	table.insert(Updatables, Controller)
-	-- table.insert(Updatables, FXManager)
-	-- table.insert(Updatables, Ship)
-	--]]
+	table.insert(Updatables, PreviewManager)
 
-	---[[
 	table.insert(Drawables, _DotPointManager)
 	table.insert(Drawables, CurrentLevel)
 	table.insert(Drawables, Launcher)
 	table.insert(Drawables, _Projectils)
 	table.insert(Drawables, _DeadProjectils)
 	table.insert(Drawables, PreviewManager)
-	-- table.insert(Drawables, FXManager)
-	-- table.insert(Drawables, Ship)
-	--]]
 end
 
 KeyboardHolder:RegisterListener("p",function() Launcher:Pulse(120,1000) end )
